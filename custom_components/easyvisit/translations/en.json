@@ -1,0 +1,83 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "EasyVisit practice",
+        "description": "Enter the practice's EasyVisit location ID, or paste its booking page link (for example {example}).",
+        "data": {
+          "location": "Location ID or booking link"
+        }
+      },
+      "appointment": {
+        "title": "Appointment type",
+        "description": "Which appointment type at {location} should be watched?",
+        "data": {
+          "appt_type_id": "Appointment type"
+        }
+      },
+      "doctors": {
+        "title": "Doctors and notifications",
+        "description": "Choose who to watch for {appt_type} at {location}. Each choice becomes a device with its own cutoff and notification switch.",
+        "data": {
+          "watches": "Doctors to watch",
+          "notify_targets": "Notify services",
+          "scan_interval": "Check every"
+        },
+        "data_description": {
+          "notify_targets": "For example notify.mobile_app_your_phone. Leave empty to only fire the easyvisit_slot_available event.",
+          "scan_interval": "Minutes between checks. One request covers every doctor."
+        }
+      }
+    },
+    "error": {
+      "invalid_location": "Enter a number, or a link containing /booking/<location>/<appointment type>.",
+      "location_not_found": "EasyVisit did not recognise that location, or could not be reached.",
+      "no_appointment_types": "That location has no bookable appointment types.",
+      "no_doctors": "Choose at least one doctor.",
+      "invalid_notify_target": "Notify services must look like notify.mobile_app_your_phone.",
+      "cannot_connect": "Could not reach EasyVisit. Try again."
+    },
+    "abort": {
+      "already_configured": "This practice and appointment type are already set up."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "EasyVisit options",
+        "data": {
+          "watches": "Doctors to watch",
+          "notify_targets": "Notify services",
+          "scan_interval": "Check every"
+        },
+        "data_description": {
+          "notify_targets": "For example notify.mobile_app_your_phone. Leave empty to only fire the easyvisit_slot_available event.",
+          "scan_interval": "Minutes between checks. One request covers every doctor."
+        }
+      }
+    },
+    "error": {
+      "no_doctors": "Choose at least one doctor.",
+      "invalid_notify_target": "Notify services must look like notify.mobile_app_your_phone."
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "slot_before_cutoff": { "name": "Slot before cutoff" }
+    },
+    "button": {
+      "test_notification": { "name": "Send test notification" }
+    },
+    "number": {
+      "cutoff_days": { "name": "Cutoff" }
+    },
+    "sensor": {
+      "next_available": { "name": "Next available" },
+      "slots_before_cutoff": { "name": "Slots before cutoff" },
+      "last_checked": { "name": "Last checked" }
+    },
+    "switch": {
+      "notifications": { "name": "Notifications" }
+    }
+  }
+}
