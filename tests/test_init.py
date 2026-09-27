@@ -117,6 +117,9 @@ async def test_new_slot_notifies_once_and_again_after_reopening(
     assert call["title"] == "Alex Morgan: 1 new slot by Sun 11 Oct"
     assert call["message"] == "Tue 29 Sep 09:00"
     assert call["data"]["clickAction"] == "https://web.easyvisit.com.au/booking/123/456"
+    assert call["data"]["priority"] == "high"
+    assert call["data"]["ttl"] == 0
+    assert call["data"]["push"] == {"interruption-level": "time-sensitive"}
     assert {e.data["watch_id"] for e in events} == {2001, 0}
     assert hass.states.get(f"{MORGAN}_slots_before_cutoff").state == "1"
 

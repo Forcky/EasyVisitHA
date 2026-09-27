@@ -26,6 +26,7 @@ Wed 30 Sep 14:15
 - *Any doctor* alerts include the doctor's name on each line.
 - The notification includes `url` / `clickAction`, so tapping it in the HA companion app opens the booking page.
 - It also sets `tag` (so a newer alert replaces the older one for the same doctor) and `group: easyvisit`.
+- It is sent as urgent, so it arrives straight away even when the phone is asleep: `priority: high` and `ttl: 0` on Android, and `push: {interruption-level: time-sensitive}` on iOS, which also lets it through Focus modes that allow time-sensitive alerts. It does not break through Android Do Not Disturb; for that, use the automation below.
 
 ## The `easyvisit_slot_available` event
 

@@ -242,6 +242,11 @@ class EasyVisitCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             "clickAction": self.booking_url,  # HA companion app, Android
             "tag": f"{DOMAIN}_{self.config_entry.entry_id}_{wid}",
             "group": DOMAIN,
+            # Slots go fast. Without these, a sleeping Android phone batches the
+            # push (Doze) and it can arrive tens of minutes late.
+            "priority": "high",  # Android
+            "ttl": 0,  # Android
+            "push": {"interruption-level": "time-sensitive"},  # iOS
         }
         for target in targets:
             domain, _, service = target.partition(".")
