@@ -30,7 +30,7 @@
       }
     },
     "error": {
-      "invalid_location": "Enter a number, or a link containing /booking/<location>/<appointment type>.",
+      "invalid_location": "Enter the location number, or paste the full booking link.",
       "location_not_found": "EasyVisit did not recognise that location, or could not be reached.",
       "no_appointment_types": "That location has no bookable appointment types.",
       "no_doctors": "Choose at least one doctor.",
