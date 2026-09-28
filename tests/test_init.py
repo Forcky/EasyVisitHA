@@ -13,13 +13,17 @@ from pytest_homeassistant_custom_component.common import (
 
 from homeassistant.core import HomeAssistant
 
-from custom_components.easyvisit.const import (
+from custom_components.gp_availability.const import (
+    ANY_DOCTOR,
     CONF_APPT_TYPE_ID,
     CONF_APPT_TYPE_NAME,
-    CONF_LOCATION_ID,
-    CONF_LOCATION_NAME,
+    CONF_BOOKING_URL,
     CONF_NOTIFY_TARGETS,
+    CONF_PRACTICE_ID,
+    CONF_PRACTICE_NAME,
+    CONF_PROVIDER,
     CONF_SCAN_INTERVAL,
+    CONF_TIMEZONE,
     CONF_WATCHES,
     DOMAIN,
     EVENT_SLOT_AVAILABLE,
@@ -55,15 +59,18 @@ async def setup(hass: HomeAssistant, mock_api, freezer):
     entry = MockConfigEntry(
         domain=DOMAIN,
         title="Example Medical Centre · Standard appt.",
-        unique_id="123_456",
+        unique_id="easyvisit_123_456",
         data={
-            CONF_LOCATION_ID: 123,
-            CONF_LOCATION_NAME: "Example Medical Centre",
-            CONF_APPT_TYPE_ID: 456,
+            CONF_PROVIDER: "easyvisit",
+            CONF_PRACTICE_ID: "123",
+            CONF_PRACTICE_NAME: "Example Medical Centre",
+            CONF_TIMEZONE: None,
+            CONF_BOOKING_URL: "https://web.easyvisit.com.au/booking/123/456",
+            CONF_APPT_TYPE_ID: "456",
             CONF_APPT_TYPE_NAME: "Standard appt.",
         },
         options={
-            CONF_WATCHES: {"2001": "Alex Morgan", "0": "Any doctor"},
+            CONF_WATCHES: {"2001": "Alex Morgan", ANY_DOCTOR: "Any doctor"},
             CONF_NOTIFY_TARGETS: ["notify.test_phone"],
             CONF_SCAN_INTERVAL: 5,
         },
@@ -120,7 +127,7 @@ async def test_new_slot_notifies_once_and_again_after_reopening(
     assert call["data"]["priority"] == "high"
     assert call["data"]["ttl"] == 0
     assert call["data"]["push"] == {"interruption-level": "time-sensitive"}
-    assert {e.data["watch_id"] for e in events} == {2001, 0}
+    assert {e.data["watch_id"] for e in events} == {"2001", ANY_DOCTOR}
     assert hass.states.get(f"{MORGAN}_slots_before_cutoff").state == "1"
 
     await _poll(hass, freezer)
@@ -144,7 +151,7 @@ async def test_switch_mutes_but_event_still_fires(hass: HomeAssistant, setup, fr
     _add_slot(resources, 2001, "2026-10-01T09:00:00")
     await _poll(hass, freezer)
     assert notify == []
-    assert any(e.data["watch_id"] == 2001 for e in events)
+    assert any(e.data["watch_id"] == "2001" for e in events)
 
 
 async def test_raising_cutoff_announces_slots_now_inside(hass: HomeAssistant, setup, freezer):
@@ -227,3 +234,81 @@ async def test_non_notify_target_is_never_called(hass: HomeAssistant, setup):
         blocking=True,
     )
     assert stop == []
+
+
+# ---- HotDoc ---------------------------------------------------------------
+
+CASEY = "sensor.dr_casey_nguyen"
+CASEY_URL = (
+    "https://www.hotdoc.com.au/medical-centres/kingston-TAS-7050/"
+    "example-medical-centre/doctors/dr-casey-nguyen"
+)
+
+
+@pytest.fixture
+async def hotdoc(hass: HomeAssistant, mock_hotdoc, freezer):
+    await hass.config.async_set_time_zone("Australia/Hobart")
+    freezer.move_to("2026-09-28T14:00:00+00:00")  # 00:00 on 29 Sep in Hobart
+    notify = async_mock_service(hass, "notify", "test_phone")
+    events = async_capture_events(hass, EVENT_SLOT_AVAILABLE)
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="Example Medical Centre · Standard Appointment ( 1 issue ) (existing patients)",
+        unique_id="hotdoc_999_501:existing",
+        data={
+            CONF_PROVIDER: "hotdoc",
+            CONF_PRACTICE_ID: "999",
+            CONF_PRACTICE_NAME: "Example Medical Centre",
+            CONF_TIMEZONE: "Australia/Hobart",
+            CONF_BOOKING_URL: "https://www.hotdoc.com.au/medical-centres/kingston-TAS-7050/example-medical-centre/doctors",
+            CONF_APPT_TYPE_ID: "501:existing",
+            CONF_APPT_TYPE_NAME: "Standard Appointment ( 1 issue ) (existing patients)",
+        },
+        options={
+            CONF_WATCHES: {"3001": "Dr Casey Nguyen", "3003": "Dr Taylor Brooks"},
+            CONF_NOTIFY_TARGETS: ["notify.test_phone"],
+            CONF_SCAN_INTERVAL: 10,
+        },
+    )
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    return entry, notify, events, mock_hotdoc
+
+
+async def test_hotdoc_entities_and_requests(hass: HomeAssistant, hotdoc):
+    _, notify, _, fake = hotdoc
+    # 14-day cutoff = to the end of 13 Oct: three 7-day windows, only the
+    # watched doctors' availability types (not Dr Walsh's 41002).
+    assert len(fake.calls) == 3
+    assert {a for a, _ in fake.calls[0][2]} == {"41001", "41003"}
+    assert fake.calls[1][0] == fake.calls[0][1]  # windows are contiguous
+
+    casey = hass.states.get(f"{CASEY}_next_available")
+    assert casey.state == "2026-09-30T01:45:00+00:00"  # 11:45 AEST
+    assert casey.attributes["booking_url"] == CASEY_URL
+    assert casey.attributes["notes"] == "Special interest in women's health."
+    assert "manual_confirm" not in casey.attributes
+    assert hass.states.get(f"{CASEY}_slots_before_cutoff").state == "7"
+    # Nothing fetched for Dr Brooks, but HotDoc says when the next one is.
+    brooks = hass.states.get("sensor.dr_taylor_brooks_next_available")
+    assert brooks.state == "2026-10-12T22:30:00+00:00"  # 09:30 AEDT on 13 Oct
+    assert hass.states.get("binary_sensor.dr_taylor_brooks_slot_before_cutoff").state == "off"
+    assert notify == []
+
+
+async def test_hotdoc_new_slot_notifies(hass: HomeAssistant, hotdoc, freezer):
+    _, notify, events, fake = hotdoc
+    fake.add_slot("41003", "2026-10-06T09:00:00+11:00")  # Dr Brooks, a cancellation
+    freezer.tick(timedelta(minutes=10, seconds=1))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+
+    assert len(notify) == 1
+    call = notify[0].data
+    assert call["title"] == "Dr Taylor Brooks: 1 new slot by Tue 13 Oct"
+    assert call["message"] == "Tue 6 Oct 09:00"
+    assert call["data"]["clickAction"].endswith("/doctors/dr-taylor-brooks")
+    assert [e.data["provider"] for e in events] == ["hotdoc"]
+    assert events[0].data["watch_id"] == "3003"
+    assert events[0].data["new_slots"][0]["start"] == "2026-10-06T09:00:00+11:00"

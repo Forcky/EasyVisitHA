@@ -1,0 +1,17 @@
+{
+  "domain": "gp_availability",
+  "name": "GP Availability",
+  "codeowners": [
+    "@Forcky"
+  ],
+  "config_flow": true,
+  "documentation": "https://github.com/Forcky/GPAvailabilityHA",
+  "integration_type": "service",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/Forcky/GPAvailabilityHA/issues",
+  "loggers": [
+    "custom_components.gp_availability"
+  ],
+  "requirements": [],
+  "version": "0.2.0"
+}

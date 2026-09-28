@@ -7,24 +7,24 @@ from homeassistant.components.switch import SwitchEntity
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
-from . import EasyVisitConfigEntry
-from .coordinator import EasyVisitCoordinator
-from .entity import EasyVisitWatchEntity
+from . import GpAvailabilityConfigEntry
+from .coordinator import GpAvailabilityCoordinator
+from .entity import GpAvailabilityWatchEntity
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: EasyVisitConfigEntry,
+    entry: GpAvailabilityConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     coordinator = entry.runtime_data
     async_add_entities(NotifySwitch(coordinator, wid) for wid in coordinator.watches)
 
 
-class NotifySwitch(EasyVisitWatchEntity, SwitchEntity):
+class NotifySwitch(GpAvailabilityWatchEntity, SwitchEntity):
     """State lives in the coordinator's Store, so it survives restarts."""
 
-    def __init__(self, coordinator: EasyVisitCoordinator, watch_id: int) -> None:
+    def __init__(self, coordinator: GpAvailabilityCoordinator, watch_id: str) -> None:
         super().__init__(coordinator, watch_id, "notifications")
 
     @property

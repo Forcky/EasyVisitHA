@@ -1,0 +1,169 @@
+{
+  "clinic": {
+    "id": 999,
+    "slug": "example-medical-centre",
+    "name": "Example Medical Centre",
+    "timezone": "Australia/Hobart",
+    "listing_path": "/medical-centres/kingston-TAS-7050/example-medical-centre/doctors",
+    "doctor_ids": [
+      3001,
+      3002,
+      3003
+    ],
+    "reason_ids": [
+      502,
+      503,
+      501
+    ]
+  },
+  "doctors": [
+    {
+      "id": 3001,
+      "slug": "dr-casey-nguyen",
+      "full_name": "Dr Casey Nguyen",
+      "accepts_new_patients": true,
+      "earliest_available": "2026-09-28T04:15:00Z",
+      "statement": "Special interest in women's health.",
+      "visible_on_hot_doc": true,
+      "listing_path": "/medical-centres/kingston-TAS-7050/example-medical-centre/doctors/dr-casey-nguyen"
+    },
+    {
+      "id": 3002,
+      "slug": "dr-robin-walsh",
+      "full_name": "Dr Robin Walsh",
+      "accepts_new_patients": false,
+      "earliest_available": "2026-10-01T01:15:00Z",
+      "statement": "",
+      "visible_on_hot_doc": true,
+      "listing_path": "/medical-centres/kingston-TAS-7050/example-medical-centre/doctors/dr-robin-walsh"
+    },
+    {
+      "id": 3003,
+      "slug": "dr-taylor-brooks",
+      "full_name": "Dr Taylor Brooks",
+      "accepts_new_patients": false,
+      "earliest_available": "2026-10-12T22:30:00Z",
+      "statement": "On leave until 12 October.",
+      "visible_on_hot_doc": true,
+      "listing_path": "/medical-centres/kingston-TAS-7050/example-medical-centre/doctors/dr-taylor-brooks"
+    }
+  ],
+  "reasons": [
+    {
+      "id": 502,
+      "name": "Long Appointment – Complex, or 2+ Issues",
+      "position": 2,
+      "bookable": false,
+      "deleted_at": null,
+      "reason_group_id": null
+    },
+    {
+      "id": 503,
+      "name": "Telehealth",
+      "position": 3,
+      "bookable": false,
+      "deleted_at": null,
+      "reason_group_id": -999
+    },
+    {
+      "id": 501,
+      "name": "Standard Appointment ( 1 issue )",
+      "position": 1,
+      "bookable": false,
+      "deleted_at": null,
+      "reason_group_id": null
+    }
+  ],
+  "doctor_reasons": [
+    {
+      "id": 7000,
+      "availability_type_id": 41001,
+      "duration": 900,
+      "is_for_new": false,
+      "doctor_id": 3001,
+      "reason_id": 501,
+      "deleted_at": null
+    },
+    {
+      "id": 7001,
+      "availability_type_id": 41002,
+      "duration": 900,
+      "is_for_new": false,
+      "doctor_id": 3002,
+      "reason_id": 501,
+      "deleted_at": null
+    },
+    {
+      "id": 7002,
+      "availability_type_id": 41003,
+      "duration": 900,
+      "is_for_new": false,
+      "doctor_id": 3003,
+      "reason_id": 501,
+      "deleted_at": null
+    },
+    {
+      "id": 7003,
+      "availability_type_id": 41004,
+      "duration": 1800,
+      "is_for_new": false,
+      "doctor_id": 3001,
+      "reason_id": 502,
+      "deleted_at": null
+    },
+    {
+      "id": 7004,
+      "availability_type_id": 41005,
+      "duration": 1800,
+      "is_for_new": false,
+      "doctor_id": 3002,
+      "reason_id": 502,
+      "deleted_at": null
+    },
+    {
+      "id": 7005,
+      "availability_type_id": 41002,
+      "duration": 900,
+      "is_for_new": false,
+      "doctor_id": 3002,
+      "reason_id": 503,
+      "deleted_at": null
+    },
+    {
+      "id": 7006,
+      "availability_type_id": 41006,
+      "duration": 1800,
+      "is_for_new": false,
+      "doctor_id": 3003,
+      "reason_id": 502,
+      "deleted_at": null
+    },
+    {
+      "id": 7007,
+      "availability_type_id": 41007,
+      "duration": 900,
+      "is_for_new": false,
+      "doctor_id": 3003,
+      "reason_id": 503,
+      "deleted_at": null
+    },
+    {
+      "id": 7008,
+      "availability_type_id": 41008,
+      "duration": 1800,
+      "is_for_new": true,
+      "doctor_id": 3001,
+      "reason_id": 501,
+      "deleted_at": null
+    },
+    {
+      "id": 7009,
+      "availability_type_id": 41009,
+      "duration": 900,
+      "is_for_new": true,
+      "doctor_id": 3002,
+      "reason_id": 501,
+      "deleted_at": "2026-01-01T00:00:00Z"
+    }
+  ]
+}

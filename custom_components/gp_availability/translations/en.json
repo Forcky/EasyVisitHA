@@ -2,10 +2,10 @@
   "config": {
     "step": {
       "user": {
-        "title": "EasyVisit practice",
-        "description": "Enter the practice's EasyVisit location ID, or paste its booking page link (for example {example}).",
+        "title": "Practice",
+        "description": "Paste the practice's booking page link from HotDoc (for example {hotdoc_example}) or EasyVisit (for example {easyvisit_example}). A HotDoc link to one doctor's page preselects that doctor. You can also enter an EasyVisit location ID.",
         "data": {
-          "location": "Location ID or booking link"
+          "location": "Booking link or EasyVisit location ID"
         }
       },
       "appointment": {
@@ -24,18 +24,18 @@
           "scan_interval": "Check every"
         },
         "data_description": {
-          "notify_targets": "For example notify.mobile_app_your_phone. Leave empty to only fire the easyvisit_slot_available event.",
-          "scan_interval": "Minutes between checks. One request covers every doctor."
+          "notify_targets": "For example notify.mobile_app_your_phone. Leave empty to only fire the gp_availability_slot_available event.",
+          "scan_interval": "Minutes between checks. Each check covers every watched doctor."
         }
       }
     },
     "error": {
-      "invalid_location": "Enter the location number, or paste the full booking link.",
-      "location_not_found": "EasyVisit did not recognise that location, or could not be reached.",
-      "no_appointment_types": "That location has no bookable appointment types.",
+      "unsupported_link": "That isn't a HotDoc or EasyVisit booking link. Paste the full link from the practice's booking page.",
+      "location_not_found": "The booking site did not recognise that practice, or could not be reached.",
+      "no_appointment_types": "That practice has no bookable appointment types.",
       "no_doctors": "Choose at least one doctor.",
       "invalid_notify_target": "Notify services must look like notify.mobile_app_your_phone.",
-      "cannot_connect": "Could not reach EasyVisit. Try again."
+      "cannot_connect": "Could not reach the booking site. Try again."
     },
     "abort": {
       "already_configured": "This practice and appointment type are already set up."
@@ -44,15 +44,15 @@
   "options": {
     "step": {
       "init": {
-        "title": "EasyVisit options",
+        "title": "GP Availability options",
         "data": {
           "watches": "Doctors to watch",
           "notify_targets": "Notify services",
           "scan_interval": "Check every"
         },
         "data_description": {
-          "notify_targets": "For example notify.mobile_app_your_phone. Leave empty to only fire the easyvisit_slot_available event.",
-          "scan_interval": "Minutes between checks. One request covers every doctor."
+          "notify_targets": "For example notify.mobile_app_your_phone. Leave empty to only fire the gp_availability_slot_available event.",
+          "scan_interval": "Minutes between checks. Each check covers every watched doctor."
         }
       }
     },

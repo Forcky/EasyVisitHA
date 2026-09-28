@@ -1,5 +1,5 @@
 {
-  "name": "EasyVisit GP Availability",
+  "name": "GP Availability",
   "render_readme": true,
   "homeassistant": "2026.8.0",
   "country": ["AU"]

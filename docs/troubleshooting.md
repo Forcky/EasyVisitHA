@@ -9,22 +9,31 @@
 3. Remember the **first check after adding a doctor is silent**. Slots already open are only announced once they reopen, or if you raise the cutoff to include them.
 4. Look at **Slots before cutoff**. If it's above 0, those slots have already been announced.
 5. On Android, check that the companion app is allowed to show notifications and isn't battery-restricted.
+6. Each doctor's alerts share one notification `tag`, so a new alert replaces the previous one in place instead of stacking. Swipe the old one away if you're unsure whether a new one arrived.
 
-## "Location not found" during setup
+## "Isn't a HotDoc or EasyVisit booking link" during setup
 
-Use the number right after `/booking/` in the practice's booking link, or paste the whole link. EasyVisit may also be temporarily unreachable; try again shortly.
+Paste the whole link from the practice's booking page (see [Configuration](configuration.md#1-practice)). For EasyVisit you can also enter just the number after `/booking/`.
+
+## "The booking site did not recognise that practice"
+
+Check the link opens the practice's page in a browser. The booking site may also be temporarily unreachable; try again shortly.
 
 ## Entities are unavailable
 
-The last check failed. EasyVisit may be down, or Home Assistant may have no internet. The integration retries on the next interval. **Cutoff** and **Notifications** stay usable while it retries. Check the logs as described below.
+The last check failed. The booking site may be down, or Home Assistant may have no internet. The integration retries on the next interval. **Cutoff** and **Notifications** stay usable while it retries. Check the logs as described below.
 
 ## Slot times look an hour off
 
-Times are converted from the practice's own zone (EasyVisit reports e.g. *Tasmania Standard Time*). Make sure Settings → System → General has the right time zone for **your** Home Assistant. Entities are stored in UTC and displayed in HA's zone.
+Times are converted from the practice's own zone (HotDoc gives it with each slot; EasyVisit reports e.g. *Tasmania Standard Time*). Make sure Settings → System → General has the right time zone for **your** Home Assistant. Entities are stored in UTC and displayed in HA's zone.
 
 ## A doctor shows "Not listed for this appointment type right now"
 
 The practice has stopped offering that appointment type for the doctor, or has hidden them online. They remain watched and come back automatically if they reappear.
+
+## HotDoc: a doctor shows a next available date but no slots
+
+HotDoc is only asked for slots up to the longest cutoff. **Next available** comes from HotDoc's own "next available" and can be later than that. Raise the cutoff if you want those slots to count.
 
 ## Debug logs
 
@@ -33,11 +42,11 @@ Add this to `configuration.yaml` and restart, or use the integration's **Enable 
 ```yaml
 logger:
   logs:
-    custom_components.easyvisit: debug
+    custom_components.gp_availability: debug
 ```
 
-Then filter Settings → System → Logs by `easyvisit`. Each announcement logs `"<doctor>: N new slot(s) by <date>"` at info level.
+Then filter Settings → System → Logs by `gp_availability`. Each announcement logs `"<doctor>: N new slot(s) by <date>"` at info level.
 
 ## Reporting an issue
 
-Open an issue at <https://github.com/Forcky/EasyVisitHA/issues> with your HA version, the integration version, and debug logs. Remove anything personal first.
+Open an issue at <https://github.com/Forcky/GPAvailabilityHA/issues> with your HA version, the integration version, the booking site, and debug logs. Remove anything personal first.

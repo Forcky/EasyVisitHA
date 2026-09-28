@@ -1,9 +1,10 @@
-"""Polls EasyVisit availability and announces newly available slots."""
+"""Polls a practice's availability and announces newly available slots."""
 from __future__ import annotations
 
 import datetime as dt
 import logging
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -11,31 +12,30 @@ from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
 
-from .api import EasyVisitApiClient, EasyVisitApiError
 from .const import (
     ANY_DOCTOR,
-    BOOKING_URL,
     CONF_APPT_TYPE_ID,
-    CONF_LOCATION_ID,
-    CONF_LOCATION_NAME,
+    CONF_BOOKING_URL,
     CONF_NOTIFY_TARGETS,
+    CONF_PRACTICE_ID,
+    CONF_PRACTICE_NAME,
     CONF_SCAN_INTERVAL,
+    CONF_TIMEZONE,
     CONF_WATCHES,
     DEFAULT_CUTOFF_DAYS,
     DEFAULT_CUTOFF_DAYS_ANY,
-    DEFAULT_SCAN_INTERVAL,
     DOMAIN,
     EVENT_SLOT_AVAILABLE,
     NOTIFY_MAX_SLOTS,
     STORAGE_VERSION,
 )
+from .providers import Doctor, Provider, ProviderError
 from .slots import (
     Slot,
     cutoff_date,
     diff_seen,
     format_date,
     format_slot,
-    parse_resources,
     qualifying,
     slots_for_watch,
 )
@@ -45,40 +45,36 @@ _LOGGER = logging.getLogger(__name__)
 _SAVE_DELAY = 10  # seconds
 
 
-class EasyVisitCoordinator(DataUpdateCoordinator[dict[str, Any]]):
-    """One resources call per poll covers every watched doctor.
+class GpAvailabilityCoordinator(DataUpdateCoordinator[dict[str, Any]]):
+    """One provider fetch per poll covers every watched doctor.
 
     coordinator.data = {
-        "doctors": {resourceId: {name, notes, manual_confirm, appointment_length}},
+        "doctors": {doctor_id: Doctor},
         "watches": {watch_id: {"slots": [Slot], "qualifying": [Slot],
-                               "cutoff": date}},
+                               "cutoff": date, "next_available": datetime | None,
+                               "url": str}},
     }
     """
 
     config_entry: ConfigEntry
 
-    def __init__(
-        self, hass: HomeAssistant, entry: ConfigEntry, client: EasyVisitApiClient
-    ) -> None:
-        minutes = entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
+    def __init__(self, hass: HomeAssistant, entry: ConfigEntry, provider: Provider) -> None:
+        minutes = entry.options.get(CONF_SCAN_INTERVAL, provider.default_scan_interval)
         super().__init__(
             hass,
             _LOGGER,
             config_entry=entry,
             name=DOMAIN,
-            update_interval=dt.timedelta(minutes=minutes),
+            update_interval=dt.timedelta(minutes=max(minutes, provider.min_scan_interval)),
         )
-        self.client = client
-        self.location_id: int = entry.data[CONF_LOCATION_ID]
-        self.appt_type_id: int = entry.data[CONF_APPT_TYPE_ID]
-        self.location_name: str = entry.data.get(CONF_LOCATION_NAME, "")
-        self.booking_url = BOOKING_URL.format(
-            location_id=self.location_id, appt_type_id=self.appt_type_id
-        )
-        self.watches: dict[int, str] = {
-            int(k): v for k, v in entry.options.get(CONF_WATCHES, {}).items()
-        }
-        self.tz: dt.tzinfo = dt_util.get_default_time_zone()
+        self.provider = provider
+        self.practice_id: str = entry.data[CONF_PRACTICE_ID]
+        self.appt_type_id: str = entry.data[CONF_APPT_TYPE_ID]
+        self.practice_name: str = entry.data.get(CONF_PRACTICE_NAME, "")
+        self.booking_url: str = entry.data[CONF_BOOKING_URL]
+        self.watches: dict[str, str] = dict(entry.options.get(CONF_WATCHES, {}))
+        zone = entry.data.get(CONF_TIMEZONE)
+        self.tz: dt.tzinfo = ZoneInfo(zone) if zone else dt_util.get_default_time_zone()
         self.last_checked: dt.datetime | None = None
         self.practice_device_id: str | None = None  # set in async_setup_entry
 
@@ -87,7 +83,7 @@ class EasyVisitCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         )
         # {watch_id: {"cutoff_days": int, "notify": bool, "seen": set[str] | None}}
         # seen is None until the watch's first poll (see _announce).
-        self._state: dict[int, dict[str, Any]] = {}
+        self._state: dict[str, dict[str, Any]] = {}
 
     # ---- persisted per-watch settings -------------------------------------
 
@@ -95,7 +91,7 @@ class EasyVisitCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         stored = await self._store.async_load() or {}
         saved = stored.get("watches", {})
         for wid in self.watches:
-            item = saved.get(str(wid), {})
+            item = saved.get(wid, {})
             seen = item.get("seen")
             default_cutoff = DEFAULT_CUTOFF_DAYS_ANY if wid == ANY_DOCTOR else DEFAULT_CUTOFF_DAYS
             self._state[wid] = {
@@ -108,7 +104,7 @@ class EasyVisitCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     def _data_to_save(self) -> dict[str, Any]:
         return {
             "watches": {
-                str(wid): {
+                wid: {
                     "cutoff_days": st["cutoff_days"],
                     "notify": st["notify"],
                     "seen": sorted(st["seen"]) if st["seen"] is not None else None,
@@ -124,19 +120,19 @@ class EasyVisitCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Write pending settings immediately (on unload/reload)."""
         await self._store.async_save(self._data_to_save())
 
-    def get_cutoff_days(self, wid: int) -> int:
+    def get_cutoff_days(self, wid: str) -> int:
         return self._state[wid]["cutoff_days"]
 
-    async def async_set_cutoff_days(self, wid: int, days: int) -> None:
+    async def async_set_cutoff_days(self, wid: str, days: int) -> None:
         self._state[wid]["cutoff_days"] = days
         self._save()
         # Recompute now; slots newly inside the window are announced.
         await self.async_request_refresh()
 
-    def get_notify(self, wid: int) -> bool:
+    def get_notify(self, wid: str) -> bool:
         return self._state[wid]["notify"]
 
-    def set_notify(self, wid: int, on: bool) -> None:
+    def set_notify(self, wid: str, on: bool) -> None:
         self._state[wid]["notify"] = on
         self._save()
         self.async_update_listeners()
@@ -144,32 +140,42 @@ class EasyVisitCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     # ---- polling -----------------------------------------------------------
 
     async def _async_update_data(self) -> dict[str, Any]:
+        now = dt_util.utcnow()
+        # Fetch far enough for the longest cutoff; some providers page by date.
+        until = max(
+            (cutoff_date(now, st["cutoff_days"], self.tz) for st in self._state.values()),
+            default=now.astimezone(self.tz).date(),
+        )
+        wanted = None if ANY_DOCTOR in self.watches else set(self.watches)
         try:
-            resources = await self.client.get_resources(self.location_id, self.appt_type_id)
-        except EasyVisitApiError as err:
+            found = await self.provider.fetch(
+                self.practice_id, self.appt_type_id, wanted, until, self.tz
+            )
+        except ProviderError as err:
             raise UpdateFailed(str(err)) from err
 
-        doctors, all_slots = parse_resources(resources, dt_util.get_default_time_zone())
-        if all_slots:
-            self.tz = all_slots[0].start.tzinfo  # the practice's own zone
-        now = dt_util.utcnow()
+        if found.slots:
+            self.tz = found.slots[0].start.tzinfo  # the practice's own zone
         self.last_checked = now
 
-        watches: dict[int, dict[str, Any]] = {}
+        watches: dict[str, dict[str, Any]] = {}
         for wid in self.watches:
             st = self._state[wid]
-            slots = slots_for_watch(all_slots, wid)
+            slots = slots_for_watch(found.slots, wid)
             match = qualifying(slots, now, st["cutoff_days"], self.tz)
+            doctor = found.doctors.get(wid)
             watches[wid] = {
                 "slots": slots,
                 "qualifying": match,
                 "cutoff": cutoff_date(now, st["cutoff_days"], self.tz),
+                "next_available": _next_available(wid, slots, found.doctors),
+                "url": (doctor.url if doctor and doctor.url else None) or self.booking_url,
             }
-            await self._announce(wid, match, watches[wid]["cutoff"])
+            await self._announce(wid, match, watches[wid])
 
-        return {"doctors": doctors, "watches": watches}
+        return {"doctors": found.doctors, "watches": watches}
 
-    async def _announce(self, wid: int, match: list[Slot], cutoff: dt.date) -> None:
+    async def _announce(self, wid: str, match: list[Slot], watch: dict[str, Any]) -> None:
         st = self._state[wid]
         if st["seen"] is None:
             # First poll for a new watch: remember what's already there without
@@ -185,6 +191,7 @@ class EasyVisitCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if not new:
             return
 
+        cutoff: dt.date = watch["cutoff"]
         _LOGGER.info(
             "%s: %d new slot(s) by %s", self.watches[wid], len(new), cutoff.isoformat()
         )
@@ -192,26 +199,28 @@ class EasyVisitCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             EVENT_SLOT_AVAILABLE,
             {
                 "entry_id": self.config_entry.entry_id,
-                "location_id": self.location_id,
+                "provider": self.provider.key,
+                "practice_id": self.practice_id,
                 "appt_type_id": self.appt_type_id,
                 "watch_id": wid,
                 "watch_name": self.watches[wid],
                 "cutoff": cutoff.isoformat(),
                 "new_slots": [s.as_dict() for s in new],
-                "booking_url": self.booking_url,
+                "booking_url": watch["url"],
             },
         )
         if st["notify"]:
-            await self.async_notify(wid, new, match, cutoff)
+            await self.async_notify(wid, new, match, cutoff, watch["url"])
 
     # ---- notifications -----------------------------------------------------
 
     async def async_notify(
         self,
-        wid: int,
+        wid: str,
         new: list[Slot],
         match: list[Slot],
         cutoff: dt.date,
+        url: str,
         test: bool = False,
     ) -> None:
         targets: list[str] = self.config_entry.options.get(CONF_NOTIFY_TARGETS, [])
@@ -238,8 +247,8 @@ class EasyVisitCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             title = f"[Test] {title}"
 
         data = {
-            "url": self.booking_url,  # HA companion app, iOS
-            "clickAction": self.booking_url,  # HA companion app, Android
+            "url": url,  # HA companion app, iOS
+            "clickAction": url,  # HA companion app, Android
             "tag": f"{DOMAIN}_{self.config_entry.entry_id}_{wid}",
             "group": DOMAIN,
             # Slots go fast. Without these, a sleeping Android phone batches the
@@ -265,10 +274,21 @@ class EasyVisitCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             except Exception:  # noqa: BLE001 - one bad target shouldn't stop the others
                 _LOGGER.exception("Sending notification via %s failed", target)
 
-    async def async_send_test(self, wid: int) -> None:
+    async def async_send_test(self, wid: str) -> None:
         """Send what is currently open before the cutoff, ignoring 'seen'."""
         watch = (self.data or {}).get("watches", {}).get(wid)
         if watch is None:
             return
         match = watch["qualifying"]
-        await self.async_notify(wid, match, match, watch["cutoff"], test=True)
+        await self.async_notify(wid, match, match, watch["cutoff"], watch["url"], test=True)
+
+
+def _next_available(
+    wid: str, slots: list[Slot], doctors: dict[str, Doctor]
+) -> dt.datetime | None:
+    """The earliest open time, even when it is beyond what was fetched."""
+    if slots:
+        return slots[0].start
+    pool = doctors.values() if wid == ANY_DOCTOR else [doctors[wid]] if wid in doctors else []
+    times = [d.next_available for d in pool if d.next_available]
+    return min(times) if times else None

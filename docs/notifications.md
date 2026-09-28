@@ -2,9 +2,9 @@
 
 ## When you get an alert
 
-Each check (default every 5 minutes):
+Each check (default every 10 minutes on HotDoc, 5 on EasyVisit):
 
-1. Fetch every open slot for the appointment type.
+1. Fetch the open slots for the appointment type, at least up to the longest cutoff.
 2. For each watched doctor, find the slots **on or before the cutoff date**.
 3. Compare them with the slots already announced. **Only new ones are announced.**
 4. Forget any slot that has gone (someone booked it), so it is announced again if it reopens.
@@ -25,28 +25,31 @@ Wed 30 Sep 14:15
 - Up to 5 slots are listed, then "+N more". If other slots before the cutoff were already open, a line like "(4 open by Sun 11 Oct in total)" is added.
 - *Any doctor* alerts include the doctor's name on each line.
 - The notification includes `url` / `clickAction`, so tapping it in the HA companion app opens the booking page.
-- It also sets `tag` (so a newer alert replaces the older one for the same doctor) and `group: easyvisit`.
+- It also sets `tag` (so a newer alert replaces the older one for the same doctor) and `group: gp_availability`.
 - It is sent as urgent, so it arrives straight away even when the phone is asleep: `priority: high` and `ttl: 0` on Android, and `push: {interruption-level: time-sensitive}` on iOS, which also lets it through Focus modes that allow time-sensitive alerts. It does not break through Android Do Not Disturb; for that, use the automation below.
 
-## The `easyvisit_slot_available` event
+## The `gp_availability_slot_available` event
 
 This event fires for every announcement, even when the Notifications switch is off:
 
 ```yaml
-event_type: easyvisit_slot_available
+event_type: gp_availability_slot_available
 data:
   entry_id: 01J...
-  location_id: 123
-  appt_type_id: 456
-  watch_id: 2001            # EasyVisit resourceId; 0 = any doctor
-  watch_name: Alex Morgan
+  provider: hotdoc          # or easyvisit
+  practice_id: "999"
+  appt_type_id: "501:existing"
+  watch_id: "2001"          # the booking site's doctor id; "any" = any doctor
+  watch_name: Dr Alex Morgan
   cutoff: "2026-10-11"
-  booking_url: https://web.easyvisit.com.au/booking/123/456
+  booking_url: https://www.hotdoc.com.au/medical-centres/.../doctors/dr-alex-morgan
   new_slots:
-    - doctor: Alex Morgan
-      resource_id: 2001
+    - doctor: Dr Alex Morgan
+      resource_id: "2001"
       start: "2026-09-29T09:00:00+10:00"
 ```
+
+`booking_url` is the doctor's own page when the site has one (HotDoc), otherwise the practice's booking page.
 
 ## Example automations
 
@@ -58,9 +61,9 @@ Turn off the integration's own **Notifications** switch for this doctor and use 
 alias: GP slot - urgent alert
 triggers:
   - trigger: event
-    event_type: easyvisit_slot_available
+    event_type: gp_availability_slot_available
     event_data:
-      watch_id: 2001
+      watch_id: "2001"
 actions:
   - action: notify.mobile_app_pixel_8
     data:
@@ -83,7 +86,7 @@ actions:
 alias: GP slot - daytime only
 triggers:
   - trigger: event
-    event_type: easyvisit_slot_available
+    event_type: gp_availability_slot_available
 conditions:
   - condition: time
     after: "07:00:00"
@@ -103,9 +106,9 @@ actions:
 alias: GP slot - speaker
 triggers:
   - trigger: event
-    event_type: easyvisit_slot_available
+    event_type: gp_availability_slot_available
     event_data:
-      watch_id: 2001
+      watch_id: "2001"
 actions:
   - action: tts.speak
     target:

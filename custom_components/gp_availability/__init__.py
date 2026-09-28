@@ -1,20 +1,22 @@
-"""EasyVisit GP availability for Home Assistant.
+"""GP availability for Home Assistant.
 
-Watches a practice's EasyVisit booking page for open appointments with chosen
-doctors and notifies when one opens up before a cutoff date.
+Watches a practice's online booking page (HotDoc, EasyVisit) for open
+appointments with chosen doctors and notifies when one opens up before a
+cutoff date.
 """
 from __future__ import annotations
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryError
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .api import EasyVisitApiClient
-from .const import DOMAIN
-from .coordinator import EasyVisitCoordinator
+from .const import CONF_PROVIDER, DOMAIN
+from .coordinator import GpAvailabilityCoordinator
 from .entity import practice_device
+from .providers import PROVIDERS
 
 PLATFORMS = [
     Platform.BINARY_SENSOR,
@@ -24,13 +26,16 @@ PLATFORMS = [
     Platform.SWITCH,
 ]
 
-type EasyVisitConfigEntry = ConfigEntry[EasyVisitCoordinator]
+type GpAvailabilityConfigEntry = ConfigEntry[GpAvailabilityCoordinator]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: EasyVisitConfigEntry) -> bool:
-    """Set up EasyVisit from a config entry."""
-    client = EasyVisitApiClient(async_get_clientsession(hass))
-    coordinator = EasyVisitCoordinator(hass, entry, client)
+async def async_setup_entry(hass: HomeAssistant, entry: GpAvailabilityConfigEntry) -> bool:
+    """Set up a practice from a config entry."""
+    provider_cls = PROVIDERS.get(entry.data.get(CONF_PROVIDER))
+    if provider_cls is None:
+        raise ConfigEntryError(f"Unknown booking provider {entry.data.get(CONF_PROVIDER)!r}")
+    provider = provider_cls(async_get_clientsession(hass))
+    coordinator = GpAvailabilityCoordinator(hass, entry, provider)
     await coordinator.async_load()
     await coordinator.async_config_entry_first_refresh()
     entry.runtime_data = coordinator
@@ -54,11 +59,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: EasyVisitConfigEntry) ->
     return True
 
 
-async def _async_reload(hass: HomeAssistant, entry: EasyVisitConfigEntry) -> None:
+async def _async_reload(hass: HomeAssistant, entry: GpAvailabilityConfigEntry) -> None:
     await hass.config_entries.async_reload(entry.entry_id)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: EasyVisitConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: GpAvailabilityConfigEntry) -> bool:
     """Unload a config entry."""
     unloaded = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unloaded:
