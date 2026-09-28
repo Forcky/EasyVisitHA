@@ -1,4 +1,56 @@
-# EasyVisit API notes
+# API notes
+
+Both sites' availability APIs are undocumented. They were worked out from each site's own web app in September 2026 and confirmed with live calls. They may change without notice.
+
+# HotDoc
+
+The patient site `https://www.hotdoc.com.au` is a single-page app. Its settings put the API on the same host under `/api/patient`. Every request needs `Accept: application/au.com.hotdoc.v5`. No login, token or cookie is needed to read availability, and a plain client with an honest User-Agent works.
+
+## Public endpoints (no auth)
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/api/patient/clinics/{slug or id}` | The practice: `clinic`, `doctors`, `reasons`, `reason_groups`, `doctor_reasons`, … Slug and numeric id both work. |
+| GET | `/api/patient/time_slots?start_time&end_time&timezone&clinic_id&availability_type_ids[]&doctor_ids[]` | Open slots. `availability_type_ids[]` and `doctor_ids[]` are repeated once per doctor; several doctors per call is fine. Times are UTC, e.g. `2026-09-28T14:00:00.000Z`. |
+
+Other calls the site makes, not used here: `/api/patient/search`, `/api/patient/suburbs/search?query=`.
+
+### Clinic response (fields used)
+
+```
+clinic:          id, slug, name, timezone (IANA, e.g. "Australia/Hobart"), listing_path
+doctors[]:       id, slug, full_name, listing_path, accepts_new_patients, statement,
+                 earliest_available (UTC, across all reasons), visible_on_hot_doc
+reasons[]:       id, name, position, deleted_at, reason_group_id (-999 = Telehealth)
+doctor_reasons[]: doctor_id, reason_id, is_for_new, availability_type_id, duration (s), deleted_at
+```
+
+An **appointment type** in this integration is a reason plus patient kind (`"<reason_id>:existing"` or `"<reason_id>:new"`). `doctor_reasons` maps each (doctor, reason, new/existing) to an `availability_type_id`, and that is what `time_slots` is queried with. The web app picks the entry whose `is_for_new` matches the patient.
+
+### time_slots response
+
+```
+time_slots[]: id, day, label ("11:45 am"), start_time / end_time (local time with offset,
+              e.g. "2026-09-30T11:45:00+10:00"), duration, availability_type_id (string),
+              link (booking deep link: /request/consult/start?defaults=practice-…,practitioner-…,when-…)
+doctors[]:    id, and next_available / prev_available for doctors with nothing in the window
+days[]:       {date}
+```
+
+## Quirks
+
+- **At most about 7 days per `time_slots` call.** 7 days works; 14, 22 and 30 days return HTTP 500 with an HTML page. The integration asks for contiguous 7-day windows up to the longest cutoff.
+- **`next_available` is only given for doctors with no slots in the window.** For the others, the first slot is the next one. Combining the two gives "next available" without fetching the whole booking horizon.
+- **Slots follow the availability type, not the doctor.** When a doctor id and availability type don't match, the response follows the type. Map slots to doctors through `doctor_reasons`, never through the ids sent.
+- **`bookable` is unreliable for non-browser clients.** Every reason comes back `bookable: false` with the message "Due to extra screening measures, we cannot complete your booking at this time…". This blocks booking only; slots are still returned. Don't filter on it.
+- `earliest_available` on a doctor covers all reasons, so it can be earlier than anything bookable for the chosen appointment type.
+- Deleted reasons and doctor_reasons stay in the response with `deleted_at` set.
+
+## Terms
+
+`robots.txt` allows everything for general agents. The patient terms (clause 11.2) prohibit reverse engineering or tampering with the platform. There is no public or partner availability API. This integration keeps to personal, read-only, low-rate use: a 10-minute default interval, clinic data cached for 6 hours, and slots fetched only up to the longest cutoff.
+
+# EasyVisit
 
 Reverse-engineered from the web booking app (`https://web.easyvisit.com.au`, an Angular SPA, `main.<hash>.js`) in September 2026 and confirmed with live calls. Nothing here is documented by EasyVisit / Sonic Healthcare.
 
@@ -44,7 +96,7 @@ photoData (base64, large), bio, ...
 
 ## Quirks
 
-- **Slot times are naive local times.** `timeZoneId` is a *Windows* zone name (`"Tasmania Standard Time"`), mapped in `slots.py`. Tasmania changes to daylight saving on the first Sunday of October, so localise every slot, never apply a fixed offset.
+- **Slot times are naive local times.** `timeZoneId` is a *Windows* zone name (`"Tasmania Standard Time"`), mapped in `providers/easyvisit.py`. Tasmania changes to daylight saving on the first Sunday of October, so localise every slot, never apply a fixed offset.
 - The resources response is about 225 KB for 12 doctors, almost all of it `photoData`. The client drops `photoData` and `bio` right away.
 - The booking window is about 6 weeks. A new day appears at the end of the window each day.
 - A doctor with nothing open still appears, with `availableSlotDates: []` and `nextAvailableSlot: null`.

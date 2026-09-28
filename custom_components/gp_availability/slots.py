@@ -1,4 +1,4 @@
-"""Slot parsing and matching.
+"""Slot matching, shared by every provider.
 
 Kept free of Home Assistant imports so the logic can be unit-tested with
 plain pytest.
@@ -8,39 +8,22 @@ from __future__ import annotations
 import datetime as dt
 from dataclasses import dataclass
 from typing import Any, Iterable
-from zoneinfo import ZoneInfo
 
 from .const import ANY_DOCTOR
-
-# EasyVisit reports each day's zone as a Windows time zone name. Slot times are
-# naive local times in that zone.
-_WINDOWS_TZ = {
-    "Tasmania Standard Time": "Australia/Hobart",
-    "AUS Eastern Standard Time": "Australia/Sydney",
-    "E. Australia Standard Time": "Australia/Brisbane",
-    "Cen. Australia Standard Time": "Australia/Adelaide",
-    "AUS Central Standard Time": "Australia/Darwin",
-    "W. Australia Standard Time": "Australia/Perth",
-}
 
 
 @dataclass(frozen=True, order=True)
 class Slot:
     """One bookable appointment time."""
 
-    start: dt.datetime  # timezone-aware; first so slots sort by time
-    resource_id: int
+    start: dt.datetime  # timezone-aware, in the practice's zone; first so slots sort by time
+    resource_id: str  # the provider's doctor id
     resource_name: str
 
     @property
     def key(self) -> str:
         """Stable identity used to remember which slots were already announced."""
         return f"{self.resource_id}|{self.start.replace(tzinfo=None).isoformat()}"
-
-    @property
-    def api_datetime(self) -> str:
-        """The naive local string the booking endpoints expect."""
-        return self.start.replace(tzinfo=None).isoformat()
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -50,39 +33,7 @@ class Slot:
         }
 
 
-def zone_for(windows_name: str | None, default: dt.tzinfo) -> dt.tzinfo:
-    """Map an EasyVisit (Windows) time zone name to a tzinfo."""
-    iana = _WINDOWS_TZ.get(windows_name or "")
-    return ZoneInfo(iana) if iana else default
-
-
-def parse_resources(
-    resources: Iterable[dict[str, Any]], default_tz: dt.tzinfo
-) -> tuple[dict[int, dict[str, Any]], list[Slot]]:
-    """Return ({resourceId: doctor info}, all slots sorted by time)."""
-    doctors: dict[int, dict[str, Any]] = {}
-    slots: list[Slot] = []
-    for res in resources:
-        rid = int(res["resourceId"])
-        name = (res.get("name") or f"Resource {rid}").strip()
-        doctors[rid] = {
-            "name": name,
-            "notes": (res.get("notesForPatients") or "").strip(),
-            "manual_confirm": bool(res.get("manualConfirm")),
-            "appointment_length": res.get("appointmentLength"),
-        }
-        for day in res.get("availableSlotDates") or []:
-            tz = zone_for(day.get("timeZoneId"), default_tz)
-            for raw in day.get("slots") or []:
-                start = dt.datetime.fromisoformat(raw["dateTime"])
-                if start.tzinfo is None:
-                    start = start.replace(tzinfo=tz)
-                slots.append(Slot(start, int(raw.get("resourceId", rid)), name))
-    slots.sort()
-    return doctors, slots
-
-
-def slots_for_watch(slots: Iterable[Slot], watch_id: int) -> list[Slot]:
+def slots_for_watch(slots: Iterable[Slot], watch_id: str) -> list[Slot]:
     """Slots belonging to one doctor, or all of them for ANY_DOCTOR."""
     if watch_id == ANY_DOCTOR:
         return list(slots)

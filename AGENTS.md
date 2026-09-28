@@ -4,29 +4,40 @@ Guidance for agents working in this repository.
 
 ## What this repo is
 
-A Home Assistant custom integration (HACS-installable, domain `easyvisit`). It polls a practice's public EasyVisit availability and notifies when a watched doctor has a slot before a cutoff. Everything lives in `custom_components/easyvisit/`. The API is documented in `API.md`; read it before touching `api.py` or `slots.py`.
+A Home Assistant custom integration (HACS-installable, domain `gp_availability`). It polls a practice's public online-booking availability (HotDoc or EasyVisit) and notifies when a watched doctor has a slot before a cutoff. Everything lives in `custom_components/gp_availability/`. The APIs are documented in `API.md`; read it before touching a provider.
+
+Until 0.2.0 this was "EasyVisit GP Availability" (domain `easyvisit`, repo `Forcky/EasyVisitHA`). The domain change was deliberate and breaking; don't add compatibility shims for the old one.
 
 ## Layout
 
-- `api.py`: a pure aiohttp client. It unwraps the `{StatusCode, Message, Data}` envelope and drops `photoData`/`bio`.
-- `slots.py`: **no Home Assistant imports**. It holds slot parsing (naive local time + Windows zone name → aware datetime), cutoff matching, and the "already announced" diff. Put pure logic here so it stays easy to test.
-- `coordinator.py`: one resources call per poll. It builds per-watch data and runs `_announce` (event + notify services). Per-watch settings (`cutoff_days`, `notify`, `seen`) live in a `helpers.storage.Store`, **not** the config entry, so changing them from an entity doesn't reload the integration. `seen: None` marks a watch that hasn't polled yet; that first poll is silent.
-- `entity.py`: one device per watch (`<entry_id>_<resourceId>`, with `0` = any doctor), linked by `via_device_id` to a practice device that `__init__.py` creates first. `via_device` (identifier tuple) is deprecated since 2026.8, hence `hacs.json`'s minimum HA version.
+- `providers/`: one module per booking site, no Home Assistant imports.
+  - `base.py`: the `Provider` ABC, the `Practice`/`ApptType`/`Doctor`/`Availability`/`ParsedInput` dataclasses, `ProviderError`, and `get_json` (the 10 MB cap).
+  - `easyvisit.py`: unwraps the `{StatusCode, Message, Data}` envelope, drops `photoData`/`bio`, and holds `parse_resources` (naive local time + Windows zone name → aware datetime).
+  - `hotdoc.py`: the clinic lookup, cached for 6 hours. An appointment type is `"<reason_id>:new|existing"`. `time_slots` is called in 7-day windows, and slots are mapped to doctors by `availability_type_id`.
+  - `__init__.py`: the `PROVIDERS` registry and `detect(text)`, which finds the provider from a pasted link.
+- `slots.py`: **no Home Assistant imports**. It holds `Slot` (doctor ids are strings), cutoff matching and the "already announced" diff.
+- `coordinator.py`: one `provider.fetch` per poll, up to the longest cutoff. It builds per-watch data and runs `_announce` (event + notify services).
+  - Per-watch settings (`cutoff_days`, `notify`, `seen`) live in a `helpers.storage.Store`, **not** the config entry, so changing them from an entity doesn't reload the integration.
+  - `seen: None` marks a watch that hasn't polled yet; that first poll is silent.
+- `entity.py`: one device per watch (`<entry_id>_<doctor id>`, with `any` = any doctor), linked by `via_device_id` to a practice device that `__init__.py` creates first. `via_device` (identifier tuple) is deprecated since 2026.8, hence `hacs.json`'s minimum HA version.
 - Platforms: `sensor`, `binary_sensor`, `number` (cutoff), `switch` (notifications), `button` (test notification).
-- `config_flow.py`: practice (ID or booking link) → appointment type → doctors + notify targets + interval. The options flow edits the same fields and reloads. The watch list is stored in options as `{"<resourceId>": "<name>"}`.
+- `config_flow.py`: link → appointment type → doctors + notify targets + interval. The options flow edits the same fields and reloads. The watch list is stored in options as `{"<doctor id>": "<name>"}`.
+
+To add a booking site, follow "Adding a provider" in `docs/development.md`. HealthEngine is the next candidate (see `docs/roadmap.md`).
 
 ## Validating changes
 
-The tests need Linux or macOS, because HA imports `fcntl`. On Windows, run them in WSL:
+The tests need Linux or macOS, because HA imports `fcntl`. On Windows, run them in WSL or in Docker:
 
 ```bash
-# once: uv venv -p 3.14 ~/.venvs/easyvisit && VIRTUAL_ENV=~/.venvs/easyvisit uv pip install -r requirements_test.txt
-cd <repo> && ~/.venvs/easyvisit/bin/python -m pytest -q -p no:cacheprovider
+docker run --rm -v "<repo>:/src:ro" python:3.14-slim sh -c \
+  'cp -r /src /w && cd /w && pip install -q -r requirements_test.txt && python -m pytest -q -p no:cacheprovider'
 ```
 
 - `tests/test_slots.py` covers the pure logic.
-- `tests/test_init.py` / `tests/test_config_flow.py` run a real HA through `pytest-homeassistant-custom-component`, with the API patched and a frozen clock (27 Sep 2026 10:00 Hobart).
-- The fixture `tests/fixtures/resources_sample.json` is an anonymised real response (3 doctors; names, notes and IDs replaced, real slot times kept).
+- `tests/test_easyvisit.py` / `tests/test_hotdoc.py` cover the providers against mocked HTTP.
+- `tests/test_init.py` / `tests/test_config_flow.py` run a real HA through `pytest-homeassistant-custom-component`, with the provider clients patched and a frozen clock.
+- The fixtures in `tests/fixtures/` are anonymised real responses (names, notes, slugs and IDs replaced, real slot times kept).
 
 CI (`.github/workflows/validate.yml`) runs HACS, hassfest and pytest. hassfest rules that trip easily:
 - `manifest.json` keys must be ordered `domain`, `name`, then alphabetical.
@@ -34,6 +45,8 @@ CI (`.github/workflows/validate.yml`) runs HACS, hassfest and pytest. hassfest r
 
 ## Gotchas
 
-- Slot `dateTime` is naive local time. Always localise it with the zone from `timeZoneId`, never a fixed offset; Tasmania changes to DST on the first Sunday of October.
+- Slot times must end up timezone-aware in the practice's zone. EasyVisit slots are naive local times with a Windows zone name; HotDoc slots carry an offset. Never apply a fixed offset: Tasmania changes to DST on the first Sunday of October.
+- HotDoc returns HTTP 500 for `time_slots` ranges much over 7 days, and marks every reason `bookable: false` for non-browser clients. Don't filter on `bookable`.
+- Be polite to the booking sites: personal, read-only, low-rate. Don't lower HotDoc's minimum interval, and don't disguise the User-Agent as a browser.
 - The Any-doctor watch at a busy practice has hundreds of qualifying slots. Keep it muted by default, with a short default cutoff.
 - Auto-booking (phase 2) must never double-book. Plan: lock → ValidateMultipleBooking → book → turn the auto-book switch off. See API.md for the unresolved `Token` field.

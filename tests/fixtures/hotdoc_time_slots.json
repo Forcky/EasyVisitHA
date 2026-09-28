@@ -1,0 +1,266 @@
+{
+  "time_slots": [
+    {
+      "id": "41001-0",
+      "day": "2026-09-30",
+      "label": "11:45 am",
+      "start_time": "2026-09-30T11:45:00+10:00",
+      "end_time": "2026-09-30T12:00:00+10:00",
+      "duration": 900,
+      "availability_type_id": "41001",
+      "link": "https://www.hotdoc.com.au/request/consult/start?defaults=practice-example-medical-centre,practitioner-dr-casey-nguyen"
+    },
+    {
+      "id": "41001-1",
+      "day": "2026-10-01",
+      "label": "1:30 pm",
+      "start_time": "2026-10-01T13:30:00+10:00",
+      "end_time": "2026-10-01T13:45:00+10:00",
+      "duration": 900,
+      "availability_type_id": "41001",
+      "link": "https://www.hotdoc.com.au/request/consult/start?defaults=practice-example-medical-centre,practitioner-dr-casey-nguyen"
+    },
+    {
+      "id": "41001-2",
+      "day": "2026-10-02",
+      "label": "11:15 am",
+      "start_time": "2026-10-02T11:15:00+10:00",
+      "end_time": "2026-10-02T11:30:00+10:00",
+      "duration": 900,
+      "availability_type_id": "41001",
+      "link": "https://www.hotdoc.com.au/request/consult/start?defaults=practice-example-medical-centre,practitioner-dr-casey-nguyen"
+    },
+    {
+      "id": "41001-3",
+      "day": "2026-10-02",
+      "label": "11:30 am",
+      "start_time": "2026-10-02T11:30:00+10:00",
+      "end_time": "2026-10-02T11:45:00+10:00",
+      "duration": 900,
+      "availability_type_id": "41001",
+      "link": "https://www.hotdoc.com.au/request/consult/start?defaults=practice-example-medical-centre,practitioner-dr-casey-nguyen"
+    },
+    {
+      "id": "41001-4",
+      "day": "2026-10-02",
+      "label": "11:45 am",
+      "start_time": "2026-10-02T11:45:00+10:00",
+      "end_time": "2026-10-02T12:00:00+10:00",
+      "duration": 900,
+      "availability_type_id": "41001",
+      "link": "https://www.hotdoc.com.au/request/consult/start?defaults=practice-example-medical-centre,practitioner-dr-casey-nguyen"
+    },
+    {
+      "id": "41001-5",
+      "day": "2026-10-02",
+      "label": "1:45 pm",
+      "start_time": "2026-10-02T13:45:00+10:00",
+      "end_time": "2026-10-02T14:00:00+10:00",
+      "duration": 900,
+      "availability_type_id": "41001",
+      "link": "https://www.hotdoc.com.au/request/consult/start?defaults=practice-example-medical-centre,practitioner-dr-casey-nguyen"
+    },
+    {
+      "id": "41001-6",
+      "day": "2026-10-02",
+      "label": "2:00 pm",
+      "start_time": "2026-10-02T14:00:00+10:00",
+      "end_time": "2026-10-02T14:15:00+10:00",
+      "duration": 900,
+      "availability_type_id": "41001",
+      "link": "https://www.hotdoc.com.au/request/consult/start?defaults=practice-example-medical-centre,practitioner-dr-casey-nguyen"
+    },
+    {
+      "id": "41002-7",
+      "day": "2026-10-01",
+      "label": "11:15 am",
+      "start_time": "2026-10-01T11:15:00+10:00",
+      "end_time": "2026-10-01T11:30:00+10:00",
+      "duration": 900,
+      "availability_type_id": "41002",
+      "link": "https://www.hotdoc.com.au/request/consult/start?defaults=practice-example-medical-centre,practitioner-dr-robin-walsh"
+    },
+    {
+      "id": "41002-8",
+      "day": "2026-10-01",
+      "label": "11:45 am",
+      "start_time": "2026-10-01T11:45:00+10:00",
+      "end_time": "2026-10-01T12:00:00+10:00",
+      "duration": 900,
+      "availability_type_id": "41002",
+      "link": "https://www.hotdoc.com.au/request/consult/start?defaults=practice-example-medical-centre,practitioner-dr-robin-walsh"
+    },
+    {
+      "id": "41002-9",
+      "day": "2026-10-01",
+      "label": "12:45 pm",
+      "start_time": "2026-10-01T12:45:00+10:00",
+      "end_time": "2026-10-01T13:00:00+10:00",
+      "duration": 900,
+      "availability_type_id": "41002",
+      "link": "https://www.hotdoc.com.au/request/consult/start?defaults=practice-example-medical-centre,practitioner-dr-robin-walsh"
+    },
+    {
+      "id": "41002-10",
+      "day": "2026-10-01",
+      "label": "1:00 pm",
+      "start_time": "2026-10-01T13:00:00+10:00",
+      "end_time": "2026-10-01T13:15:00+10:00",
+      "duration": 900,
+      "availability_type_id": "41002",
+      "link": "https://www.hotdoc.com.au/request/consult/start?defaults=practice-example-medical-centre,practitioner-dr-robin-walsh"
+    },
+    {
+      "id": "41002-11",
+      "day": "2026-10-05",
+      "label": "9:00 am",
+      "start_time": "2026-10-05T09:00:00+11:00",
+      "end_time": "2026-10-05T09:15:00+11:00",
+      "duration": 900,
+      "availability_type_id": "41002",
+      "link": "https://www.hotdoc.com.au/request/consult/start?defaults=practice-example-medical-centre,practitioner-dr-robin-walsh"
+    },
+    {
+      "id": "41002-12",
+      "day": "2026-10-05",
+      "label": "9:15 am",
+      "start_time": "2026-10-05T09:15:00+11:00",
+      "end_time": "2026-10-05T09:30:00+11:00",
+      "duration": 900,
+      "availability_type_id": "41002",
+      "link": "https://www.hotdoc.com.au/request/consult/start?defaults=practice-example-medical-centre,practitioner-dr-robin-walsh"
+    },
+    {
+      "id": "41002-13",
+      "day": "2026-10-05",
+      "label": "10:45 am",
+      "start_time": "2026-10-05T10:45:00+11:00",
+      "end_time": "2026-10-05T11:00:00+11:00",
+      "duration": 900,
+      "availability_type_id": "41002",
+      "link": "https://www.hotdoc.com.au/request/consult/start?defaults=practice-example-medical-centre,practitioner-dr-robin-walsh"
+    },
+    {
+      "id": "41002-14",
+      "day": "2026-10-05",
+      "label": "11:00 am",
+      "start_time": "2026-10-05T11:00:00+11:00",
+      "end_time": "2026-10-05T11:15:00+11:00",
+      "duration": 900,
+      "availability_type_id": "41002",
+      "link": "https://www.hotdoc.com.au/request/consult/start?defaults=practice-example-medical-centre,practitioner-dr-robin-walsh"
+    },
+    {
+      "id": "41002-15",
+      "day": "2026-10-05",
+      "label": "11:15 am",
+      "start_time": "2026-10-05T11:15:00+11:00",
+      "end_time": "2026-10-05T11:30:00+11:00",
+      "duration": 900,
+      "availability_type_id": "41002",
+      "link": "https://www.hotdoc.com.au/request/consult/start?defaults=practice-example-medical-centre,practitioner-dr-robin-walsh"
+    },
+    {
+      "id": "41002-16",
+      "day": "2026-10-05",
+      "label": "11:30 am",
+      "start_time": "2026-10-05T11:30:00+11:00",
+      "end_time": "2026-10-05T11:45:00+11:00",
+      "duration": 900,
+      "availability_type_id": "41002",
+      "link": "https://www.hotdoc.com.au/request/consult/start?defaults=practice-example-medical-centre,practitioner-dr-robin-walsh"
+    },
+    {
+      "id": "41002-17",
+      "day": "2026-10-05",
+      "label": "11:45 am",
+      "start_time": "2026-10-05T11:45:00+11:00",
+      "end_time": "2026-10-05T12:00:00+11:00",
+      "duration": 900,
+      "availability_type_id": "41002",
+      "link": "https://www.hotdoc.com.au/request/consult/start?defaults=practice-example-medical-centre,practitioner-dr-robin-walsh"
+    },
+    {
+      "id": "41002-18",
+      "day": "2026-10-05",
+      "label": "12:30 pm",
+      "start_time": "2026-10-05T12:30:00+11:00",
+      "end_time": "2026-10-05T12:45:00+11:00",
+      "duration": 900,
+      "availability_type_id": "41002",
+      "link": "https://www.hotdoc.com.au/request/consult/start?defaults=practice-example-medical-centre,practitioner-dr-robin-walsh"
+    },
+    {
+      "id": "41002-19",
+      "day": "2026-10-05",
+      "label": "12:45 pm",
+      "start_time": "2026-10-05T12:45:00+11:00",
+      "end_time": "2026-10-05T13:00:00+11:00",
+      "duration": 900,
+      "availability_type_id": "41002",
+      "link": "https://www.hotdoc.com.au/request/consult/start?defaults=practice-example-medical-centre,practitioner-dr-robin-walsh"
+    },
+    {
+      "id": "41002-20",
+      "day": "2026-10-05",
+      "label": "1:00 pm",
+      "start_time": "2026-10-05T13:00:00+11:00",
+      "end_time": "2026-10-05T13:15:00+11:00",
+      "duration": 900,
+      "availability_type_id": "41002",
+      "link": "https://www.hotdoc.com.au/request/consult/start?defaults=practice-example-medical-centre,practitioner-dr-robin-walsh"
+    },
+    {
+      "id": "41002-21",
+      "day": "2026-10-05",
+      "label": "1:15 pm",
+      "start_time": "2026-10-05T13:15:00+11:00",
+      "end_time": "2026-10-05T13:30:00+11:00",
+      "duration": 900,
+      "availability_type_id": "41002",
+      "link": "https://www.hotdoc.com.au/request/consult/start?defaults=practice-example-medical-centre,practitioner-dr-robin-walsh"
+    }
+  ],
+  "days": [
+    {
+      "date": "2026-09-29"
+    },
+    {
+      "date": "2026-09-30"
+    },
+    {
+      "date": "2026-10-01"
+    },
+    {
+      "date": "2026-10-02"
+    },
+    {
+      "date": "2026-10-03"
+    },
+    {
+      "date": "2026-10-04"
+    },
+    {
+      "date": "2026-10-05"
+    },
+    {
+      "date": "2026-10-06"
+    }
+  ],
+  "doctors": [
+    {
+      "id": 3001,
+      "detail": false
+    },
+    {
+      "id": 3002,
+      "detail": false
+    },
+    {
+      "id": 3003,
+      "detail": false,
+      "next_available": "2026-10-13T09:30:00+11:00",
+      "prev_available": null
+    }
+  ]
+}

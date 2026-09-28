@@ -6,22 +6,22 @@ from homeassistant.const import UnitOfTime
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
-from . import EasyVisitConfigEntry
+from . import GpAvailabilityConfigEntry
 from .const import MAX_CUTOFF_DAYS, MIN_CUTOFF_DAYS
-from .coordinator import EasyVisitCoordinator
-from .entity import EasyVisitWatchEntity
+from .coordinator import GpAvailabilityCoordinator
+from .entity import GpAvailabilityWatchEntity
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: EasyVisitConfigEntry,
+    entry: GpAvailabilityConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     coordinator = entry.runtime_data
     async_add_entities(CutoffDays(coordinator, wid) for wid in coordinator.watches)
 
 
-class CutoffDays(EasyVisitWatchEntity, NumberEntity):
+class CutoffDays(GpAvailabilityWatchEntity, NumberEntity):
     """0 = today only, 14 = anything up to two weeks from today."""
 
     _attr_mode = NumberMode.BOX
@@ -30,7 +30,7 @@ class CutoffDays(EasyVisitWatchEntity, NumberEntity):
     _attr_native_step = 1
     _attr_native_unit_of_measurement = UnitOfTime.DAYS
 
-    def __init__(self, coordinator: EasyVisitCoordinator, watch_id: int) -> None:
+    def __init__(self, coordinator: GpAvailabilityCoordinator, watch_id: str) -> None:
         super().__init__(coordinator, watch_id, "cutoff_days")
 
     @property

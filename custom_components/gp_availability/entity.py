@@ -5,27 +5,27 @@ from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import ANY_DOCTOR, DOMAIN
-from .coordinator import EasyVisitCoordinator
+from .coordinator import GpAvailabilityCoordinator
 
 
-def practice_device(coordinator: EasyVisitCoordinator) -> DeviceInfo:
+def practice_device(coordinator: GpAvailabilityCoordinator) -> DeviceInfo:
     entry = coordinator.config_entry
     return DeviceInfo(
         identifiers={(DOMAIN, entry.entry_id)},
-        name=coordinator.location_name or entry.title,
-        manufacturer="EasyVisit",
+        name=coordinator.practice_name or entry.title,
+        manufacturer=coordinator.provider.name,
         model=entry.title,
         entry_type=DeviceEntryType.SERVICE,
         configuration_url=coordinator.booking_url,
     )
 
 
-class EasyVisitWatchEntity(CoordinatorEntity[EasyVisitCoordinator]):
+class GpAvailabilityWatchEntity(CoordinatorEntity[GpAvailabilityCoordinator]):
     """An entity belonging to one watch (a doctor, or any doctor)."""
 
     _attr_has_entity_name = True
 
-    def __init__(self, coordinator: EasyVisitCoordinator, watch_id: int, key: str) -> None:
+    def __init__(self, coordinator: GpAvailabilityCoordinator, watch_id: str, key: str) -> None:
         super().__init__(coordinator)
         self.watch_id = watch_id
         entry_id = coordinator.config_entry.entry_id
@@ -33,12 +33,12 @@ class EasyVisitWatchEntity(CoordinatorEntity[EasyVisitCoordinator]):
         self._attr_translation_key = key
         name = coordinator.watches[watch_id]
         if watch_id == ANY_DOCTOR:
-            name = f"Any doctor at {coordinator.location_name}"
+            name = f"Any doctor at {coordinator.practice_name}"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, f"{entry_id}_{watch_id}")},
             name=name,
-            manufacturer="EasyVisit",
-            model=coordinator.location_name,
+            manufacturer=coordinator.provider.name,
+            model=coordinator.practice_name,
             entry_type=DeviceEntryType.SERVICE,
             configuration_url=coordinator.booking_url,
             via_device_id=coordinator.practice_device_id,

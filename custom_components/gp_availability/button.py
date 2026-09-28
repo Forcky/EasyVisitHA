@@ -6,24 +6,24 @@ from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
-from . import EasyVisitConfigEntry
-from .coordinator import EasyVisitCoordinator
-from .entity import EasyVisitWatchEntity
+from . import GpAvailabilityConfigEntry
+from .coordinator import GpAvailabilityCoordinator
+from .entity import GpAvailabilityWatchEntity
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: EasyVisitConfigEntry,
+    entry: GpAvailabilityConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     coordinator = entry.runtime_data
     async_add_entities(TestNotifyButton(coordinator, wid) for wid in coordinator.watches)
 
 
-class TestNotifyButton(EasyVisitWatchEntity, ButtonEntity):
+class TestNotifyButton(GpAvailabilityWatchEntity, ButtonEntity):
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
-    def __init__(self, coordinator: EasyVisitCoordinator, watch_id: int) -> None:
+    def __init__(self, coordinator: GpAvailabilityCoordinator, watch_id: str) -> None:
         super().__init__(coordinator, watch_id, "test_notification")
 
     async def async_press(self) -> None:
